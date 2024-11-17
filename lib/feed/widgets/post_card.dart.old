@@ -1,0 +1,238 @@
+import 'package:bluesky/bluesky.dart' as bsky;
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter/material.dart';
+import 'package:test_atp/core/constants/colors.dart';
+import 'package:test_atp/core/services/post_service.dart';
+import 'package:test_atp/core/widgets/post_action.dart';
+import 'package:test_atp/core/widgets/reply_composer.dart';
+import 'package:timeago/timeago.dart' as timeago;
+
+class PostCard extends StatelessWidget {
+  final bsky.FeedView post;
+  final bool isSelected;
+  final bool isCompact;
+  final PostService postService;
+
+  const PostCard({
+    super.key,
+    required this.post,
+    required this.postService,
+    this.isSelected = false,
+    this.isCompact = false,
+  });
+
+  Future<void> _handleLike() async {
+    try {
+      await postService.likePost(post.post.uri, post.post.cid);
+    } catch (e) {
+      debugPrint('Error liking post: $e');
+    }
+  }
+
+  Future<void> _handleRepost() async {
+    try {
+      await postService.repost(post.post.uri, post.post.cid);
+    } catch (e) {
+      debugPrint('Error reposting: $e');
+    }
+  }
+
+  void _handleReply(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) => ReplyComposer(
+        postService: postService,
+        replyTo: post,
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      elevation: 0,
+      margin: EdgeInsets.zero,
+      color: isSelected ? Colors.grey.shade50 : null,
+      child: Padding(
+        padding: EdgeInsets.all(isCompact ? 12.0 : 16.0),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _PostAvatar(
+              avatarUrl: post.post.author.avatar,
+              isCompact: isCompact,
+            ),
+            SizedBox(width: isCompact ? 8 : 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _PostHeader(
+                    post: post,
+                    isCompact: isCompact,
+                  ),
+                  SizedBox(height: isCompact ? 2 : 4),
+                  _PostBody(
+                    text: post.post.record.text,
+                    isCompact: isCompact,
+                  ),
+                  SizedBox(height: isCompact ? 8 : 12),
+                  _PostActions(
+                    post: post,
+                    isCompact: isCompact,
+                    onLike: _handleLike,
+                    onRepost: _handleRepost,
+                    onReply: () => _handleReply(context),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PostAvatar extends StatelessWidget {
+  final String? avatarUrl;
+  final bool isCompact;
+
+  const _PostAvatar({
+    required this.avatarUrl,
+    required this.isCompact,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return CircleAvatar(
+      radius: isCompact ? 20 : 24,
+      backgroundImage: CachedNetworkImageProvider(
+        avatarUrl ?? 'https://placeholder.com/150',
+      ),
+    );
+  }
+}
+
+class _PostHeader extends StatelessWidget {
+  final bsky.FeedView post;
+  final bool isCompact;
+
+  const _PostHeader({
+    required this.post,
+    required this.isCompact,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Text(
+          post.post.author.displayName ?? post.post.author.handle,
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: isCompact ? 14 : 16,
+          ),
+        ),
+        SizedBox(width: isCompact ? 2 : 4),
+        Text(
+          '@${post.post.author.handle}',
+          style: TextStyle(
+            color: AppColors.darkGray,
+            fontSize: isCompact ? 12 : 14,
+          ),
+        ),
+        const Spacer(),
+        Text(
+          timeago.format(post.post.indexedAt),
+          style: TextStyle(
+            color: AppColors.darkGray,
+            fontSize: isCompact ? 12 : 14,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _PostBody extends StatelessWidget {
+  final String text;
+  final bool isCompact;
+
+  const _PostBody({
+    required this.text,
+    required this.isCompact,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      text,
+      style: TextStyle(
+        fontSize: isCompact ? 14 : 16,
+        height: 1.4,
+      ),
+    );
+  }
+}
+
+class _PostActions extends StatelessWidget {
+  final bsky.FeedView post;
+  final bool isCompact;
+  final VoidCallback onLike;
+  final VoidCallback onRepost;
+  final VoidCallback onReply;
+
+  const _PostActions({
+    required this.post,
+    required this.isCompact,
+    required this.onLike,
+    required this.onRepost,
+    required this.onReply,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        PostAction(
+          icon: Icons.chat_bubble_outline,
+          count: post.post.replyCount,
+          size: isCompact ? 18 : 20,
+          onPressed: onReply,
+        ),
+        PostAction(
+          icon: Icons.repeat,
+          activeIcon: Icons.repeat,
+          count: post.post.repostCount,
+          size: isCompact ? 18 : 20,
+          isActive: post.post.viewer.repost != null,
+          onPressed: onRepost,
+        ),
+        PostAction(
+          icon: Icons.favorite_border,
+          activeIcon: Icons.favorite,
+          count: post.post.likeCount,
+          size: isCompact ? 18 : 20,
+          isActive: post.post.viewer.like != null,
+          onPressed: onLike,
+        ),
+        IconButton(
+          icon: Icon(
+            Icons.share_outlined,
+            size: isCompact ? 18 : 20,
+          ),
+          onPressed: () {},
+          color: AppColors.darkGray,
+          padding: EdgeInsets.zero,
+          constraints: BoxConstraints(
+            minWidth: isCompact ? 32 : 40,
+            minHeight: isCompact ? 32 : 40,
+          ),
+        ),
+      ],
+    );
+  }
+}
