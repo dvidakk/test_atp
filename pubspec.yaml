@@ -12,7 +12,7 @@ dependencies:
     sdk: flutter
 
   cupertino_icons: ^1.0.8
-  bluesky: ^0.17.1
+  bluesky: ^0.18.0
   toml: ^0.16.0
   timeago: ^3.7.0
   cached_network_image: ^3.4.0

@@ -29,18 +29,26 @@ packages:
     dependency: transitive
     description:
       name: atproto
-      sha256: "7ce2b1364be3742150beebe3a5bb1b43a0305f4df51808462f764cd0ed6c2d3d"
+      sha256: c42e83c81d2793ae133034bbc88e6503b6e3cc7a05838a9bb68fe0b7c070e5da
       url: "https://pub.dev"
     source: hosted
-    version: "0.12.8"
+    version: "0.13.0"
   atproto_core:
     dependency: transitive
     description:
       name: atproto_core
-      sha256: "57ccf13631b7281f198038009ffb9a667bc4ec215e36093c6aade7c123bf2b56"
+      sha256: "0907a96181f24a3109db3711516afe467aa00c9e47ec82aca4d89163597e7779"
       url: "https://pub.dev"
     source: hosted
-    version: "0.10.6"
+    version: "0.11.0"
+  atproto_oauth:
+    dependency: transitive
+    description:
+      name: atproto_oauth
+      sha256: aa85bbbba34707248385e0d3b0916b55b143bd30dc9dad66ced05ee4219da50f
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.0.1"
   base_codecs:
     dependency: transitive
     description:
@@ -53,10 +61,10 @@ packages:
     dependency: "direct main"
     description:
       name: bluesky
-      sha256: "84bba999712cef0ae45fbb640e0504ddcf9d3ab1409506aade49dfd2efdea91a"
+      sha256: "6059d9251086e963721a44a3f49f90ae575e705d5602a20c58b85b6d020095eb"
       url: "https://pub.dev"
     source: hosted
-    version: "0.17.1"
+    version: "0.18.0"
   boolean_selector:
     dependency: transitive
     description:
@@ -288,6 +296,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.19.0"
+  js:
+    dependency: transitive
+    description:
+      name: js
+      sha256: c1b2e9b5ea78c45e1a0788d29606ba27dc5f71f019f32ca5140f61ef071838cf
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.7.1"
   json_annotation:
     dependency: transitive
     description:
@@ -488,6 +504,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.1.8"
+  pointycastle:
+    dependency: transitive
+    description:
+      name: pointycastle
+      sha256: "4be0097fcf3fd3e8449e53730c631200ebc7b88016acecab2b0da2f0149222fe"
+      url: "https://pub.dev"
+    source: hosted
+    version: "3.9.1"
   provider:
     dependency: "direct main"
     description:
@@ -801,10 +825,10 @@ packages:
     dependency: transitive
     description:
       name: xrpc
-      sha256: "5161f4fb1bbab719d1ed48b95258363031ebd03ec79e4de489f645537bb51dcb"
+      sha256: "3a2b42ad246676150554de1bb035bf8fda589f2871ac8376590af5aab865996a"
       url: "https://pub.dev"
     source: hosted
-    version: "0.5.3"
+    version: "0.6.0"
 sdks:
   dart: ">=3.5.4 <4.0.0"
   flutter: ">=3.24.0"

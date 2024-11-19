@@ -1,4 +1,4 @@
-package com.example.test_atp
+package com.cumulus.app
 
 import io.flutter.embedding.android.FlutterActivity
 
