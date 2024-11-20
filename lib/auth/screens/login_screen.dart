@@ -1,10 +1,9 @@
-import 'package:bluesky/atproto.dart';
-import 'package:bluesky/bluesky.dart' as bsky;
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:test_atp/core/constants/colors.dart';
+import 'package:test_atp/core/services/auth_service.dart';
 import 'package:test_atp/core/utils/rand_art.dart';
 import 'package:test_atp/feed/screens/feed_screen.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -35,19 +34,12 @@ class LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _loadLastServer() async {
-    final prefs = await SharedPreferences.getInstance();
-    final lastServer = prefs.getString('last_server');
-    if (lastServer != null) {
-      setState(() {
-        _selectedServer = lastServer;
-        _serverController.text = lastServer;
-      });
-    }
-  }
-
-  Future<void> _saveLastServer(String server) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('last_server', server);
+    final authService = Provider.of<AuthService>(context, listen: false);
+    final lastServer = await authService.getLastServer();
+    setState(() {
+      _selectedServer = lastServer;
+      _serverController.text = lastServer;
+    });
   }
 
   Future<void> _login() async {
@@ -63,26 +55,30 @@ class LoginScreenState extends State<LoginScreen> {
       _errorMessage = null;
     });
 
+    final authService = Provider.of<AuthService>(context, listen: false);
+
     try {
-      final session = await createSession(
+      final success = await authService.login(
         identifier: _identifierController.text.trim(),
         password: _passwordController.text,
         //service: _serverController.text.trim(),
       );
 
-      await _saveLastServer(_serverController.text.trim());
-
-      final bluesky = bsky.Bluesky.fromSession(session.data);
-
       if (!mounted) return;
 
-      await Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (context) => FeedScreen(bluesky: bluesky),
-        ),
-      );
+      if (success) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const FeedScreen()),
+        );
+      } else {
+        setState(() {
+          _errorMessage = authService.errorMessage;
+          _isLoading = false;
+        });
+      }
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _errorMessage =
             'Login failed. Please check your credentials and server.';

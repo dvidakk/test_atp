@@ -8,11 +8,13 @@ import 'package:test_atp/feed/widgets/post_card/post_card.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:test_atp/feed/widgets/post_skeleton.dart';
 import 'package:test_atp/composer/widgets/base_composer.dart';
+import 'package:provider/provider.dart';
+import 'package:test_atp/core/services/auth_service.dart';
+import 'package:test_atp/auth/screens/login_screen.dart';
+import 'package:bluesky/core.dart';
 
 class FeedScreen extends StatefulWidget {
-  final bsky.Bluesky bluesky;
-
-  const FeedScreen({super.key, required this.bluesky});
+  const FeedScreen({super.key});
 
   @override
   FeedScreenState createState() => FeedScreenState();
@@ -40,17 +42,37 @@ class FeedScreenState extends State<FeedScreen> {
     });
   }
 
+  @override
+  void initState() {
+    super.initState();
+    final authService = Provider.of<AuthService>(context, listen: false);
+    _postService = PostService(authService.bluesky!);
+    _fetchFeed();
+  }
+
   Future<void> _fetchFeed() async {
+    final authService = Provider.of<AuthService>(context, listen: false);
+
+    // Validate session before making API calls
+    final isValid = await authService.validateAndRefreshSession();
+    if (!isValid) {
+      if (!mounted) return;
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const LoginScreen()),
+      );
+      return;
+    }
+
     setState(() {
       _isLoading = true;
     });
 
     try {
-      final preferences = await widget.bluesky.actor.getPreferences();
+      final preferences = await authService.bluesky!.actor.getPreferences();
       final moderationPrefs = preferences.data.getModerationPrefs();
 
-      // Use 'bluesky:discover' algorithm to get the discover timeline
-      final response = await widget.bluesky.feed.getTimeline(
+      final response = await authService.bluesky!.feed.getTimeline(
         headers: getLabelerHeaders(moderationPrefs),
         algorithm: 'bluesky:discover',
         limit: 20,
@@ -60,6 +82,7 @@ class FeedScreenState extends State<FeedScreen> {
 
       setState(() {
         _feedPosts = response.data.feed;
+        print(_feedPosts);
         _logger.info('Fetched ${_feedPosts.length} posts from discover feed');
         _isLoading = false;
       });
@@ -69,14 +92,17 @@ class FeedScreenState extends State<FeedScreen> {
         _isLoading = false;
       });
       _logger.severe('Error fetching discover feed: $e');
-    }
-  }
 
-  @override
-  void initState() {
-    super.initState();
-    _postService = PostService(widget.bluesky);
-    _fetchFeed();
+      // Handle session errors
+      if (e is UnauthorizedException) {
+        await authService.logout();
+        if (!mounted) return;
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const LoginScreen()),
+        );
+      }
+    }
   }
 
   Future<void> _refreshFeed() async {
@@ -85,6 +111,7 @@ class FeedScreenState extends State<FeedScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final authService = Provider.of<AuthService>(context);
     final isDesktop = MediaQuery.of(context).size.width > 1000;
     final isMediumWidth = MediaQuery.of(context).size.width > 600;
 
@@ -133,16 +160,30 @@ class FeedScreenState extends State<FeedScreen> {
             ),
             if (isMediumWidth) ...[
               const SizedBox(width: 16),
-              const Text('Bluesky Client'),
+              const Text('Cumulus'),
             ],
           ],
         ),
         actions: [
-          if (isMediumWidth)
+          if (isMediumWidth) ...[
             IconButton(
               icon: const Icon(Icons.account_circle),
-              onPressed: () {},
+              onPressed: () {
+                // Navigate to profile
+              },
             ),
+            IconButton(
+              icon: const Icon(Icons.logout),
+              onPressed: () async {
+                await authService.logout();
+                if (!context.mounted) return;
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (context) => const LoginScreen()),
+                );
+              },
+            ),
+          ],
         ],
       ),
       body: isDesktop
@@ -216,7 +257,18 @@ class FeedScreenState extends State<FeedScreen> {
           : feedList,
       floatingActionButton: FloatingActionButton(
         backgroundColor: AppColors.blue,
-        onPressed: () {
+        onPressed: () async {
+          // Validate session before composing
+          final isValid = await authService.validateAndRefreshSession();
+          if (!isValid) {
+            if (!mounted) return;
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => const LoginScreen()),
+            );
+            return;
+          }
+
           Navigator.push(
             context,
             MaterialPageRoute(
@@ -225,12 +277,9 @@ class FeedScreenState extends State<FeedScreen> {
                 onCancel: () => Navigator.pop(context),
                 onSubmit: (text) async {
                   await _postService.createPost(text);
-                  // Optionally refresh the feed after posting
-                  setState(() {
-                    // Trigger feed refresh
-                  });
+                  await _fetchFeed(); // Refresh feed after posting
                 },
-                type: ComposerType.newPost, // Specify the composer type
+                type: ComposerType.newPost,
               ),
             ),
           );
