@@ -29,10 +29,7 @@ class PostHeader extends StatelessWidget {
                 context,
                 MaterialPageRoute(
                   builder: (context) => ProfileScreen(
-                    bluesky: postService.bluesky, // Use postService directly
                     handle: post.post.author.handle,
-                    postService:
-                        postService, // Pass postService to ProfileScreen
                   ),
                 ),
               );

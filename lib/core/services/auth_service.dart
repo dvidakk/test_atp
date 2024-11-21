@@ -1,11 +1,12 @@
-// lib/core/services/auth_service.dart
-
 import 'package:bluesky/atproto.dart' as atp;
 import 'package:bluesky/bluesky.dart' as bsky;
 import 'package:bluesky/core.dart';
 import 'package:flutter/material.dart';
 import 'package:jwt_decode/jwt_decode.dart' as jwt_decode;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'dart:convert';
+
+import 'package:test_atp/core/models/stored_account.dart';
 
 class AuthService extends ChangeNotifier {
   bsky.Bluesky? _bluesky;
@@ -13,15 +14,16 @@ class AuthService extends ChangeNotifier {
   String? _errorMessage;
   DateTime? _accessTokenExpiry;
 
-  // Secure storage instance
   final _secureStorage = const FlutterSecureStorage();
 
-  // Getters
+  List<StoredAccount> _storedAccounts = [];
+
   bsky.Bluesky? get bluesky => _bluesky;
   bool get isAuthenticated => _isAuthenticated;
   String? get errorMessage => _errorMessage;
 
-  // Initialize from stored session
+  List<StoredAccount> get storedAccounts => _storedAccounts;
+
   Future<bool> initializeFromStorage() async {
     final handle = await _secureStorage.read(key: 'handle');
     final did = await _secureStorage.read(key: 'did');
@@ -116,8 +118,8 @@ class AuthService extends ChangeNotifier {
       _accessTokenExpiry = _getExpiryDateFromJwt(sessionData.accessJwt);
 
       // Update bluesky instance with new session data
-      _bluesky =
-          bsky.Bluesky.fromSession(sessionData, service: _bluesky!.service);
+      _bluesky = bsky.Bluesky.fromSession(sessionData);
+      _isAuthenticated = true;
 
       // Save refreshed session securely
       await _secureStorage.write(key: 'handle', value: sessionData.handle);
@@ -177,9 +179,63 @@ class AuthService extends ChangeNotifier {
     }
   }
 
-  // Get last used server
   Future<String> getLastServer() async {
     return await _secureStorage.read(key: 'last_server') ??
         'https://bsky.social';
+  }
+
+  Future<void> _loadStoredAccounts() async {
+    final accountsJson = await _secureStorage.read(key: 'stored_accounts');
+    if (accountsJson != null) {
+      final List<dynamic> decoded = jsonDecode(accountsJson);
+      _storedAccounts = decoded.map((e) => StoredAccount.fromJson(e)).toList();
+    }
+  }
+
+  Future<void> _saveStoredAccounts() async {
+    final accountsJson =
+        jsonEncode(_storedAccounts.map((e) => e.toJson()).toList());
+    await _secureStorage.write(key: 'stored_accounts', value: accountsJson);
+  }
+
+  Future<void> addStoredAccount(StoredAccount account) async {
+    if (!_storedAccounts.any((a) => a.did == account.did)) {
+      _storedAccounts.add(account);
+      await _saveStoredAccounts();
+      notifyListeners();
+    }
+  }
+
+  Future<void> removeStoredAccount(String did) async {
+    _storedAccounts.removeWhere((a) => a.did == did);
+    await _saveStoredAccounts();
+    notifyListeners();
+  }
+
+  // Add a method to handle API calls with auto-refresh
+  Future<T> authenticatedRequest<T>(Future<T> Function() request) async {
+    try {
+      // Check if token needs refresh before making request
+      if (await isAccessTokenExpired()) {
+        final refreshed = await refreshSession();
+        if (!refreshed) {
+          throw Exception('Failed to refresh session');
+        }
+      }
+
+      return await request();
+    } catch (e) {
+      if (e.toString().contains('Token has expired')) {
+        // Try refreshing token and retrying request once
+        final refreshed = await refreshSession();
+        if (refreshed) {
+          return await request();
+        }
+      }
+
+      // If refresh failed or other error, logout and rethrow
+      await logout();
+      rethrow;
+    }
   }
 }
