@@ -1,7 +1,7 @@
 # Bluesky Client Features Todo
 
 ## Composer Features
-- [ ] Character counter (300 limit)
+- [?] Character counter (300 limit) <!-- Implemented in BaseComposer Needs impromeing-->
 - [ ] Image upload support
 - [ ] GIF picker integration
 - [ ] Poll creation
@@ -14,8 +14,8 @@
 - [ ] Video upload service
 - [ ] GIF search integration
 - [ ] Media preview grid
-- [ ] Image compression
-- [ ] Cached image loading
+- [x] Image compression <!-- Implemented in image handling -->
+- [x] Cached image loading <!-- Using CachedNetworkImage -->
 
 ## Search
 - [ ] Post search
@@ -25,7 +25,7 @@
 - [ ] Search filters
 
 ## Profile Features
-- [ ] Follow/Unfollow functionality
+- [?] Follow/Unfollow functionality <!-- partialy Implemented in PostService -->
 - [ ] Mute user
 - [ ] Block user
 - [ ] Followers list
@@ -93,7 +93,8 @@
 ## Infrastructure
 - [ ] Offline support
 - [ ] Post caching
-- [ ] Image caching
-- [ ] Error handling
-- [ ] Rate limit handling
+- [x] Image caching <!-- Using CachedNetworkImage -->
+- [x] Error handling <!-- Implemented in AuthService and PostService -->
+- [x] Rate limit handling <!-- Implemented in AuthService -->
 - [ ] Analytics
+- [ ] dontfail silently
